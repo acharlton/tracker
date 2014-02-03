@@ -1,0 +1,45 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          solar-tracker
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start daemon at boot time
+# Description:       Enable service provided by daemon.
+### END INIT INFO
+
+# Modify this line to your OpenRemote Controller installation path
+cd /root/Adafruit-Raspberry-Pi-Python-Code/Adafruit_PWM_Servo_Driver
+
+case "$1" in
+
+stop)
+        echo "Stopping ..."
+        CAM_PID=`ps auxwww | grep solar-tracke[r] | head -1 | awk '{print $2}'`
+        kill -9 $CAM_PID
+        ;;
+
+start)
+        # start OpenRemote in background mode
+        /root/Adafruit-Raspberry-Pi-Python-Code/Adafruit_PWM_Servo_Driver/solar-tracker.py > /dev/null 2>&1 &
+        echo "solar-tracker started..."
+        ;;
+
+restart)
+        echo "Stopping solar-tracker..."
+        CAM_PID=`ps auxwww | grep solar-tracke[r] | head -1 | awk '{print $2}'`
+        kill -9 $CAM_PID
+        #sleep 5
+        
+        echo "Starting solar-tracker..."
+               /root/Adafruit-Raspberry-Pi-Python-Code/Adafruit_PWM_Servo_Driver/solar-tracker.py > /dev/null 2>&1 &
+        ;;
+*)
+        echo "usage: $0 { start | stop | restart}" >&2
+        exit 1
+        ;;
+
+esac
+
+
