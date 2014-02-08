@@ -8,11 +8,18 @@ try:
 	import spidev
 	import RPi.GPIO as GPIO
 
+	# GPIO references actual pin numbers (top left is 3.3v pin 2 is 5v)
 	GPIO.setmode(GPIO.BOARD)
 
-	# pin 8 is the base of the transistor
-	GPIO.setup(8,GPIO.OUT)
-	GPIO.output(8,0)
+	# pin 12 is the base of the transistor->relay
+	GPIO.setup(12,GPIO.OUT)
+	GPIO.output(12,0) # pin, low or high
+	GPIO.output(12,1) # pin, low or high
+	
+	# pin 15 is the base of the transistor->FET
+	GPIO.setup(15,GPIO.OUT)
+	GPIO.output(15,0)
+	GPIO.output(15,1) # FET on for batt monitor
 
 	# pin 16 is the first LDR sensor
 	GPIO.setup(16,GPIO.OUT)
@@ -32,8 +39,10 @@ try:
 	move = True
 	difference = 0
 	tolerance = 0.15
+	print "Tolerance: " + str(tolerance)
 	#saveenergy = 3600
 	snooze = 10
+	print "Snooze Period: " + str(snooze)
 
 	# need to read last position
 	pos = 500
@@ -41,20 +50,18 @@ try:
 	min = 100
 
 	# initialize servo
-	print "initializing - max left: " + str(max)
-	GPIO.output(8,1)
+	print "panning servo - max left: " + str(max)
+	#pwm.setPWM(0,0,min)
 	#time.sleep(1)
-	pwm.setPWM(0,0,min)
-	time.sleep(1)
-	print "initializing - max right: " + str(min)
-	pwm.setPWM(0,0,max)
-	time.sleep(2)
+	print "panning servo - max right: " + str(min)
+	#pwm.setPWM(0,0,max)
+	#time.sleep(2)
 	print "starting...." + str(pos)
 
 	def pause(t):
 		localtime = time.asctime( time.localtime(time.time()) )
-		print "Local current time :", localtime
-        	print "sleeping.." + str(t)
+		print "Local current time:\t", localtime
+        	print "sleeping.." + str(t) + "\n\n"
         	time.sleep(t)
         
 	def readadc(adcnum):
@@ -65,36 +72,33 @@ try:
     		return adcout
 
 	while move:
-        	GPIO.output(8,1) # transistor on
+        	GPIO.output(12,1) # transistor on to saturate 5v relay for servo power enable
         	move = True
-        	right = readadc(1)
         	left = readadc(0)
-		batt = readadc(2)
-        	battvolts = (batt * 9.98) / 1024
+        	right = readadc(1)
+		batt = readadc(3)
+        	battvolts = (batt * 10.47) / 1024
         	lvolts = (left * 3.3) / 1024
         	rvolts = (right * 3.3) / 1024
-        	print ("batt: %4d/1023 => %5.3fV [L%4d/1023 => %5.3fV] [R%4d/1023 => %5.3fV]" % (batt, battvolts, left, lvolts, right, rvolts))
+        	print ("\n\nBattery: \t\t%5.3fv \nSensors: \t\t[left] %5.3fv \n\t\t\t[right] %5.3fv" % (battvolts, lvolts, rvolts))
         	difference = lvolts - rvolts
         	if((-1*tolerance > difference) or (difference > tolerance)):
                 	if(left > right):
                         	pos = pos - 20
-                        	print "< " + str(pos)
+                        	print "moving < " + str(pos)
                         	pwm.setPWM(0,0,pos)
                         	if(pos < min):
                                 	pos = min
                                 	pause(snooze)
                 	elif(left < right):
                         	pos = pos + 20 
-                        	print "> " + str(pos)        
+                        	print "moving > " + str(pos)        
                         	pwm.setPWM(0,0,pos)
                         	if(pos > max):
-                        		#pwm.setPWM(0,0,pos)
                                 	pos = max
                                 	pause(snooze)
        	 	else:
-                	print "|..centered..|"
-        		print ("batt: %4d/1023 => %5.3f" % (batt, battvolts))
-                	GPIO.output(8,0)
+                	GPIO.output(12,0)
                 	pause(snooze)
 
         	time.sleep(0.1)
